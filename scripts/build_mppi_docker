@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Exit on error
+set -e
+
+# Check if IsaacGym exists in the correct location
+if [ ! -d "src/mppi_isaac/thirdparty/isaacgym" ]; then
+    echo "Error: IsaacGym not found in src/mppi_isaac/thirdparty/isaacgym"
+    echo "Please make sure IsaacGym is in the correct location"
+    exit 1
+fi
+
+echo "Building MPPI Isaac Docker image..."
+docker build -t mppi_isaac -f docker/Dockerfile.mppi . 

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Exit on error
+set -e
+
+# Get the current directory
+WORKSPACE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+
+# Remove existing container with the same name if it exists
+docker rm -f mppi_isaac 2>/dev/null || true
+
+# Allow X server connection from docker
+xhost +local:docker
+
+# Run the Docker container with NVIDIA runtime and mount the source directory
+docker run --gpus all -it \
+    --name mppi_isaac \
+    --net=host \
+    --privileged \
+    --ipc=host \
+    -e DISPLAY=$DISPLAY \
+    -e NVIDIA_VISIBLE_DEVICES=all \
+    -e NVIDIA_DRIVER_CAPABILITIES=graphics,compute,utility \
+    -e BRIDGE_HOST=0.0.0.0 \
+    -e BRIDGE_PORT=9091 \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v $XAUTHORITY:/root/.Xauthority \
+    -v $(pwd)/src/mppi_isaac:/workspace/mppi_isaac \
+    -v /dev/shm:/dev/shm \
+    --runtime=nvidia \
+    mppi_isaac
+
+# Revoke X server access
+xhost -local:docker 

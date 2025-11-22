@@ -1,0 +1,7 @@
+type: robot
+name: xarm6
+urdf_file: "xarm6/xarm6_stick.urdf"
+ee_link: "xarm6_ee_tip"
+fixed: True
+flip_visual: false
+gravity: false
