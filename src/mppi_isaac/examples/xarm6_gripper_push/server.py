@@ -20,16 +20,16 @@ class Objective(object):
     """ Objective function for the push task """
     def __init__(self, cfg, device):
         # Choose task
-        self.task = "hovering" # push, hovering
+        self.task = "push" # push, hovering
 
         if self.task == "push":
             self.ee_hover_height = 0.03
             self.w_robot_to_block_pos = 5
             self.w_block_to_goal_pos =  30
-            self.w_block_to_goal_ori =  2
+            self.w_block_to_goal_ori =  10
             self.w_ee_hover =           8.5
             self.w_ee_align =           0.5
-            self.w_push_align =         5
+            self.w_push_align =         15
 
         elif self.task == "hovering":
             self.ee_hover_height = 0.3
@@ -44,38 +44,11 @@ class Objective(object):
         self.ee_index = 11  
         self.block_index = 1 
 
-        # Candidate goal positions
-        self.goal_pos_list = [
-            [0.65,  0.0, 0.5], # center
-            [ 0.7,  0.2, 0.5], # left
-            [ 0.7, -0.2, 0.5], # right
-            [0.65,  0.2, 0.5], # left-lower
-        ]
- 
-        # Candidate goal orientations
-        self.goal_ori_list = [
-            [0.0, 0.0,        0.0,       1.0], # yaw =   0 deg
-            [0.0, 0.0,   0.258819, 0.9659258], # yaw =  30 deg
-            [0.0, 0.0,  -0.258819, 0.9659258], # yaw = -30 deg
-            [0.0, 0.0,   0.382499, 0.9239557], # yaw =  45 deg
-            [0.0, 0.0,  -0.382499, 0.9239557], # yaw = -45 deg
-            [0.0, 0.0,     0.5000,    0.8660], # yaw =  60 deg
-            [], # yaw = -60 deg
-            [0.0, 0.0,     0.7071,    0.7071], # yaw =  90 deg
-        ]
-
-        # Test goal pose
-        self.goal_pose_c_00 = torch.tensor(self.goal_pos_list[0] + self.goal_ori_list[0], device="cuda:0") # Rotation   0 deg
-        self.goal_pose_l_30 = torch.tensor(self.goal_pos_list[1] + self.goal_ori_list[1], device="cuda:0") # Rotation  30 deg
-        self.goal_pose_r_30 = torch.tensor(self.goal_pos_list[2] + self.goal_ori_list[2], device="cuda:0") # Rotation -30 deg
-        self.goal_pose_l_45 = torch.tensor(self.goal_pos_list[1] + self.goal_ori_list[3], device="cuda:0") # Rotation  45 deg
-        self.goal_pose_r_45 = torch.tensor(self.goal_pos_list[2] + self.goal_ori_list[4], device="cuda:0") # Rotation -45 deg
-        self.goal_pose_l_60 = torch.tensor(self.goal_pos_list[3] + self.goal_ori_list[5], device="cuda:0") # Rotation  60 deg
-        self.goal_pose_r_60 = torch.tensor(self.goal_pos_list[3] + self.goal_ori_list[6], device="cuda:0") # Rotation -60 deg
-        self.goal_pose_l_90 = torch.tensor(self.goal_pos_list[1] + self.goal_ori_list[7], device="cuda:0") # Rotation  90 deg
+        # Set goal pose
+        self.goal_pose = torch.tensor([0.7, 0.2, 0.5] + [0.0, 0.0, 0.258819, 0.9659258], device="cuda:0") # Rotation 30 deg
 
         # Select goal pose and compute yaw
-        self.goal_pose = torch.clone(self.goal_pose_l_30)
+        self.goal_pose = torch.clone(self.goal_pose)
         self.goal_ori = torch.clone(self.goal_pose[3:7])
         self.goal_yaw = quat_to_yaw(self.goal_ori[0], self.goal_ori[1], self.goal_ori[2], self.goal_ori[3])
 
@@ -84,8 +57,7 @@ class Objective(object):
 
        # Setting TensorBoard Logging
         self.step_count = 0
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_dir = f"logs/server_{timestamp}"
+        log_dir = f"logs/server"
         os.makedirs(log_dir, exist_ok=True)
         self.writer = SummaryWriter(log_dir)
         print(f"[Server] TensorBoard logging to: {log_dir}")

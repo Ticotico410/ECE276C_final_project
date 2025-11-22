@@ -80,48 +80,20 @@ def run_xarm6_robot(cfg: ExampleConfig):
     obj_list = [
         #   l      w      h      mu     m      x      y
         [0.162, 0.086, 0.068, 0.300, 0.250, 0.400, 0.000],
-        [0.116, 0.116, 0.060, 0.637, 0.016, 0.380, 0.000],
         [0.078, 0.078, 0.078, 0.300, 0.025, 0.400, 0.000],
     ]
-    
-    # Candidate goal positions
-    goal_pos_list = [
-        [0.65,  0.0, 0.5], # center
-        [ 0.7,  0.2, 0.5], # left
-        [ 0.7, -0.2, 0.5], # right
-        [0.65,  0.2, 0.5], # left-lower
-    ]
 
-    # Candidate goal orientations
-    goal_ori_list = [
-        [0.0, 0.0,        0.0,       1.0], # yaw =   0 deg
-        [0.0, 0.0,   0.258819, 0.9659258], # yaw =  30 deg
-        [0.0, 0.0,  -0.258819, 0.9659258], # yaw = -30 deg
-        [0.0, 0.0,   0.382499, 0.9239557], # yaw =  45 deg
-        [0.0, 0.0,  -0.382499, 0.9239557], # yaw = -45 deg
-        [0.0, 0.0,     0.5000,    0.8660], # yaw =  60 deg
-        [0.0, 0.0,    -0.5000,    0.8660], # yaw = -60 deg
-        [0.0, 0.0,     0.7071,    0.7071], # yaw =  90 deg
-    ]
-
-    # Test goal pose
-    goal_pose_c_00 = torch.tensor(goal_pos_list[0] + goal_ori_list[0], device="cuda:0") # Rotation   0 deg
-    goal_pose_l_30 = torch.tensor(goal_pos_list[1] + goal_ori_list[1], device="cuda:0") # Rotation  30 deg
-    goal_pose_r_30 = torch.tensor(goal_pos_list[2] + goal_ori_list[2], device="cuda:0") # Rotation -30 deg
-    goal_pose_l_45 = torch.tensor(goal_pos_list[1] + goal_ori_list[3], device="cuda:0") # Rotation  45 deg
-    goal_pose_r_45 = torch.tensor(goal_pos_list[2] + goal_ori_list[4], device="cuda:0") # Rotation -45 deg
-    goal_pose_l_60 = torch.tensor(goal_pos_list[3] + goal_ori_list[5], device="cuda:0") # Rotation  60 deg
-    goal_pose_r_60 = torch.tensor(goal_pos_list[3] + goal_ori_list[6], device="cuda:0") # Rotation -60 deg
-    goal_pose_l_90 = torch.tensor(goal_pos_list[1] + goal_ori_list[7], device="cuda:0") # Rotation  90 deg
+    # Set goal pose
+    goal_pose = torch.tensor([0.7, 0.2, 0.5] + [0.0, 0.0, 0.258819, 0.9659258], device="cuda:0") # Rotation 30 deg
     
     # Select block and goal from the candidate lists
-    obj_ = obj_list[2][:]
-    goal_pose = torch.clone(goal_pose_l_30)
+    obj_ = obj_list[0][:]
+    goal_pose = torch.clone(goal_pose)
 
     # Initialize block size, position and orientation
     obj_size = [obj_[0], obj_[1], obj_[2]]
     obj_init_pos = [obj_[5], obj_[6], table_size[-1] + obj_[2] / 2]
-    obj_init_ori = goal_ori_list[0]
+    obj_init_ori = [0.0, 0.0, 0.0, 1.0]
 
     # Initialize goal size, position and orientation
     goal_size = [obj_[0], obj_[1], 0.005]
@@ -249,7 +221,7 @@ def run_xarm6_robot(cfg: ExampleConfig):
     count = 0
     step_count = 0               
     n_trials = 0 
-    timeout = 20
+    timeout = 50
     block_index = 1
     
     data_rt = []
@@ -260,8 +232,7 @@ def run_xarm6_robot(cfg: ExampleConfig):
     client_helper = Objective(cfg, cfg.mppi.device)
     
     # Setting TensorBoard Logging 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_dir = f"logs/client_{timestamp}"
+    log_dir = f"logs/client"
     os.makedirs(log_dir, exist_ok=True)
     writer = SummaryWriter(log_dir)
     print(f"[Client] TensorBoard logging to: {log_dir}")
@@ -352,8 +323,7 @@ def run_xarm6_robot(cfg: ExampleConfig):
             print("[Info] Etheta:", Etheta)
             print("[Info] Metrics:", metrics)
 
-            #if Ex < 0.02 and Ey < 0.02:   # NOTE: not consider goal yaw
-            if Ex < 0.02 and Ey < 0.02 and Etheta < 0.1:   # NOTE: consider goal yaw
+            if Ex < 0.02 and Ey < 0.02 and Etheta < 0.1:
                 print("\n-------------------------------------------------------")
                 print("Task success!")
                 final_time = time.time()
