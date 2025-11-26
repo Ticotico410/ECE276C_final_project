@@ -1,34 +1,59 @@
-#!/bin/bash
+FROM nvcr.io/nvidia/pytorch:21.09-py3
+ENV DEBIAN_FRONTEND=noninteractive 
 
-# Exit on error
-set -e
+# dependencies for gym
+#
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+ libxcursor-dev \
+ libxrandr-dev \
+ libxinerama-dev \
+ libxi-dev \
+ mesa-common-dev \
+ zip \
+ unzip \
+ make \
+ gcc-8 \
+ g++-8 \
+ vulkan-utils \
+ mesa-vulkan-drivers \
+ pigz \
+ git \
+ libegl1 \
+ git-lfs \
+ x11-apps \
+ x11-xserver-utils
 
-# Get the current directory
-WORKSPACE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+# Force gcc 8 to avoid CUDA 10 build issues on newer base OS
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 8
+RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 8
 
-# Remove existing container with the same name if it exists
-docker rm -f mppi_isaac 2>/dev/null || true
+# WAR for eglReleaseThread shutdown crash in libEGL_mesa.so.0 (ensure it's never detected/loaded)
+# Can't remove package libegl-mesa0 directly (because of libegl1 which we need)
+RUN rm -f /usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0 /usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0.0.0 /usr/share/glvnd/egl_vendor.d/50_mesa.json 2>/dev/null || true
 
-# Allow X server connection from docker
-xhost +local:docker
+WORKDIR /workspace
 
-# Run the Docker container with NVIDIA runtime and mount the source directory
-docker run --gpus all -it \
-    --name mppi_isaac \
-    --net=host \
-    --privileged \
-    --ipc=host \
-    -e DISPLAY=$DISPLAY \
-    -e NVIDIA_VISIBLE_DEVICES=all \
-    -e NVIDIA_DRIVER_CAPABILITIES=graphics,compute,utility \
-    -e BRIDGE_HOST=0.0.0.0 \
-    -e BRIDGE_PORT=9091 \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
-    -v $XAUTHORITY:/root/.Xauthority \
-    -v $(pwd)/src/mppi_isaac:/workspace/mppi_isaac \
-    -v /dev/shm:/dev/shm \
-    --runtime=nvidia \
-    mppi_isaac
+# Copy IsaacGym
+COPY src/mppi_isaac/thirdparty/isaacgym /workspace/isaacgym
 
-# Revoke X server access
-xhost -local:docker 
+# Copy NVIDIA configuration files from isaacgym
+COPY src/mppi_isaac/thirdparty/isaacgym/docker/nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json
+COPY src/mppi_isaac/thirdparty/isaacgym/docker/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+
+# Install IsaacGym
+WORKDIR /workspace/isaacgym/python
+RUN pip install -q -e .
+
+# Copy MPPI Isaac source code
+WORKDIR /workspace
+COPY src/mppi_isaac /workspace/mppi_isaac
+
+# Install MPPI Isaac dependencies
+WORKDIR /workspace/mppi_isaac
+RUN pip install -q -r requirements.txt 2>/dev/null || pip install -q hydra-core omegaconf pyyaml
+
+ENV NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=all
+ENV PYTHONPATH=/workspace/mppi_isaac:$PYTHONPATH
+
+WORKDIR /workspace/mppi_isaac
