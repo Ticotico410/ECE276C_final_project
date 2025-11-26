@@ -1,6 +1,5 @@
 FROM nvcr.io/nvidia/pytorch:21.09-py3
-ENV DEBIAN_FRONTEND=noninteractive 
-
+ENV DEBIAN_FRONTEND=noninteractive
 # dependencies for gym
 #
 RUN apt-get update \
@@ -23,37 +22,32 @@ RUN apt-get update \
  git-lfs \
  x11-apps \
  x11-xserver-utils
-
 # Force gcc 8 to avoid CUDA 10 build issues on newer base OS
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 8
 RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 8
-
 # WAR for eglReleaseThread shutdown crash in libEGL_mesa.so.0 (ensure it's never detected/loaded)
 # Can't remove package libegl-mesa0 directly (because of libegl1 which we need)
 RUN rm -f /usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0 /usr/lib/x86_64-linux-gnu/libEGL_mesa.so.0.0.0 /usr/share/glvnd/egl_vendor.d/50_mesa.json 2>/dev/null || true
-
 WORKDIR /workspace
-
 # Copy IsaacGym
 COPY src/mppi_isaac/thirdparty/isaacgym /workspace/isaacgym
-
 # Copy NVIDIA configuration files from isaacgym
 COPY src/mppi_isaac/thirdparty/isaacgym/docker/nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json
 COPY src/mppi_isaac/thirdparty/isaacgym/docker/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
-
 # Install IsaacGym
 WORKDIR /workspace/isaacgym/python
 RUN pip install -q -e .
-
+# Install other dependency
+RUN pip install gym
+RUN pip install zerorpc
+RUN pip install pytorch3d
+RUN pip install ghalton
 # Copy MPPI Isaac source code
 WORKDIR /workspace
 COPY src/mppi_isaac /workspace/mppi_isaac
-
 # Install MPPI Isaac dependencies
 WORKDIR /workspace/mppi_isaac
 RUN pip install -q -r requirements.txt 2>/dev/null || pip install -q hydra-core omegaconf pyyaml
-
 ENV NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=all
 ENV PYTHONPATH=/workspace/mppi_isaac:$PYTHONPATH
-
 WORKDIR /workspace/mppi_isaac
