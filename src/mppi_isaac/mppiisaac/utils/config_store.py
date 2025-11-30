@@ -16,6 +16,7 @@ class ExampleConfig:
     actors: List[str]
     initial_actor_positions: List[List[float]]
     viewer: bool
+    prior_checkpoint: Optional[str] = None
 
 cs = ConfigStore.instance()
 cs.store(name="config_xarm6_gripper_push", node=ExampleConfig)

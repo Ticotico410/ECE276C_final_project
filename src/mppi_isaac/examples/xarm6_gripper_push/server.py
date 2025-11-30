@@ -7,6 +7,7 @@ import numpy as np
 
 from omegaconf import OmegaConf
 from mppiisaac.planner.mppi_isaac import MPPIisaacPlanner
+from mppiisaac.prior.offline_sac_prior import OfflineSACPrior, PriorConfig
 
 import torch
 import pytorch3d.transforms
@@ -183,7 +184,16 @@ def run_xarm6_robot(cfg: ExampleConfig):
     cfg = OmegaConf.to_object(cfg)
 
     objective = Objective(cfg, cfg.mppi.device)
-    planner = zerorpc.Server(MPPIisaacPlanner(cfg, objective, prior=None))
+    prior = None
+    if getattr(cfg, "prior_checkpoint", None):
+        print(f"[Server] Loading prior from {cfg.prior_checkpoint}")
+        prior = OfflineSACPrior(
+            PriorConfig(
+                checkpoint=cfg.prior_checkpoint,
+                device=cfg.mppi.device,
+            )
+        )
+    planner = zerorpc.Server(MPPIisaacPlanner(cfg, objective, prior=prior))
     planner.bind("tcp://0.0.0.0:4242")
     
     try:

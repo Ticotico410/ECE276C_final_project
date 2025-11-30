@@ -8,3 +8,4 @@ actors: ['xarm6_gripper']
 initial_actor_positions: [[0.0, 0.0, 0.0]]
 viewer: false
 nx: 12
+prior_checkpoint: null

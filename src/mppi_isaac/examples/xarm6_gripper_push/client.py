@@ -69,7 +69,7 @@ def run_xarm6_robot(cfg: ExampleConfig):
         init_positions=cfg.initial_actor_positions,
         actors=actors,
         num_envs=1,
-        viewer=True,
+        viewer=False,
     )
 
     # Create boxes manually                          

@@ -1,0 +1,19 @@
+Quick guide: train SAC prior and plug into MPPI
+==============================================
+
+1) Train (aligned with MPPI cost/obs/action)
+   - In container workspace root:
+     - Lightweight aligned trainer: `python3 examples/train_sac_push_online_aligned.py --log_dir outputs/tb/train_aligned`
+     - Checkpoint default: `outputs/offline_sac_prior.pt` (includes obs mean/std), dataset: `outputs/online_push_dataset.npz`.
+   - Notes:
+     - Uses same cost as MPPI (push_objective.compute_push_cost).
+     - Action limit matches MPPI u_min/u_max (=0.2).
+     - Adjust entropy/alpha lr via flags in script if needed.
+
+2) Run MPPI server with prior
+   - Start server (Hydra override):
+     `python3 examples/xarm6_gripper_push/server.py prior_checkpoint=/workspace/mppi_isaac/outputs/offline_sac_prior.pt`
+   - Without prior: omit the override or set `prior_checkpoint=null`.
+
+3) Client
+   - Client code unchanged; it will use whatever prior the server loaded.
