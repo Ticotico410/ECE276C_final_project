@@ -50,7 +50,15 @@ class MPPIisaacPlanner(object):
         )
 
         if prior:
-            self.prior = lambda state, t: prior.compute_command(self.sim)
+            def _prior_fn(state, t):
+                # prior returns a batch (num_envs, act_dim); MPPI expects a single action vector.
+                act = prior.compute_command(self.sim)
+                if isinstance(act, tuple):
+                    act = act[0]
+                if act.dim() > 1:
+                    act = act[0]
+                return act.to(self.cfg.mppi.device)
+            self.prior = _prior_fn
         else:
             self.prior = None
 
